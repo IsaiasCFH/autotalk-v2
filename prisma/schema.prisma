@@ -1,0 +1,282 @@
+// AutoTalk — Schema de Base de Datos
+// Convención: tablas en PascalCase, campos en camelCase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ROLES Y DEPARTAMENTOS
+// Usamos enums para valores fijos — más seguro que strings libres
+// ─────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+enum Department {
+  COBRANZA
+  SELECCION
+  CONTABILIDAD
+  VENTAS
+  CSX
+}
+
+enum WhatsappStatus {
+  CONNECTED
+  DISCONNECTED
+  BANNED
+}
+
+enum CommitmentStatus {
+  PENDING      // compromiso registrado, aún no se cumple la fecha
+  PAID         // pagó
+  BROKEN       // incumplió
+  CHURNED      // ya no usa los servicios
+}
+
+enum MessageStatus {
+  PENDING      // en cola
+  SENT         // enviado (un check)
+  DELIVERED    // entregado (dos checks)
+  READ         // leído (checks azules)
+  FAILED       // falló
+}
+
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+// ─────────────────────────────────────────
+// AGENTE — el que usa la plataforma
+// ─────────────────────────────────────────
+
+model Agent {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  password     String       // siempre hasheado, nunca plain text
+  name         String
+  role         Role         @default(AGENT)
+  departments  Department[] // un agente puede estar en varios departamentos
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relaciones
+  campaigns     Campaign[]
+  conversations Conversation[]
+  templates     Template[]
+
+  @@map("agents") // nombre real de la tabla en postgres
+}
+
+// ─────────────────────────────────────────
+// NÚMERO DE WHATSAPP
+// Un número = una sesión de WhatsApp
+// ─────────────────────────────────────────
+
+model WhatsappNumber {
+  id           String         @id @default(cuid())
+  number       String         @unique // ej: 56912345678
+  label        String?        // ej: "Número Cobranza"
+  status       WhatsappStatus @default(DISCONNECTED)
+  department   Department     // decidiste que es 1:1 con departamento
+  sessionData  String?        // datos de sesión de Baileys (JSON)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relaciones
+  campaigns     Campaign[]
+  conversations Conversation[]
+  messageLogs   MessageLog[]
+
+  @@map("whatsapp_numbers")
+}
+
+// ─────────────────────────────────────────
+// CONTACTO — a quien le enviamos mensajes
+// (lo llamabas "usuario" — renombrado para no confundir)
+// ─────────────────────────────────────────
+
+model Contact {
+  id           String    @id @default(cuid())
+  phone        String    @unique // número de WhatsApp
+  name         String?
+  isBlocked    Boolean   @default(false) // bloqueado por el contacto
+  metadata     Json?     // datos extra (empresa, cargo, etc.)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relaciones
+  conversations Conversation[]
+  messageLogs   MessageLog[]
+  commitments   Commitment[]
+
+  @@map("contacts")
+}
+
+// ─────────────────────────────────────────
+// PLANTILLA — mensajes reutilizables
+// Se usa en campañas, N:M con Campaign
+// ─────────────────────────────────────────
+
+model Template {
+  id           String     @id @default(cuid())
+  name         String
+  content      String     // el texto del mensaje
+  department   Department
+  createdBy    Agent      @relation(fields: [agentId], references: [id])
+  agentId      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relaciones N:M con Campaign
+  campaigns    CampaignTemplate[]
+
+  @@map("templates")
+}
+
+// ─────────────────────────────────────────
+// CAMPAÑA — envío masivo de mensajes
+// ─────────────────────────────────────────
+
+model Campaign {
+  id           String         @id @default(cuid())
+  name         String
+  department   Department
+  status       CampaignStatus @default(DRAFT)
+  scheduledAt  DateTime?      // para campañas programadas
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relaciones
+  agent        Agent          @relation(fields: [agentId], references: [id])
+  agentId      String
+  number       WhatsappNumber @relation(fields: [numberId], references: [id])
+  numberId     String
+  templates    CampaignTemplate[]
+  messageLogs  MessageLog[]
+
+  @@map("campaigns")
+}
+
+// ─────────────────────────────────────────
+// TABLA PUENTE — Campaign <-> Template (N:M)
+// En Prisma las relaciones N:M explícitas necesitan tabla puente
+// ─────────────────────────────────────────
+
+model CampaignTemplate {
+  campaign     Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId   String
+  template     Template  @relation(fields: [templateId], references: [id])
+  templateId   String
+  order        Int       @default(0) // orden de los mensajes en la campaña
+
+  @@id([campaignId, templateId]) // clave primaria compuesta
+  @@map("campaign_templates")
+}
+
+// ─────────────────────────────────────────
+// MESSAGE LOG — registro individual de cada envío de campaña
+// Una fila por cada (campaña + contacto)
+// ─────────────────────────────────────────
+
+model MessageLog {
+  id           String        @id @default(cuid())
+  status       MessageStatus @default(PENDING)
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  failReason   String?       // si falló, por qué
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relaciones
+  campaign     Campaign       @relation(fields: [campaignId], references: [id])
+  campaignId   String
+  contact      Contact        @relation(fields: [contactId], references: [id])
+  contactId    String
+  number       WhatsappNumber @relation(fields: [numberId], references: [id])
+  numberId     String
+
+  @@map("message_logs")
+}
+
+// ─────────────────────────────────────────
+// CONVERSACIÓN — hilo de mensajes con un contacto
+// ─────────────────────────────────────────
+
+model Conversation {
+  id           String     @id @default(cuid())
+  department   Department
+  isOpen       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relaciones
+  contact      Contact        @relation(fields: [contactId], references: [id])
+  contactId    String
+  agent        Agent?         @relation(fields: [agentId], references: [id])
+  agentId      String?        // puede no estar asignado aún
+  number       WhatsappNumber @relation(fields: [numberId], references: [id])
+  numberId     String
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+// ─────────────────────────────────────────
+// MENSAJE — cada mensaje dentro de una conversación
+// ─────────────────────────────────────────
+
+model Message {
+  id             String        @id @default(cuid())
+  content        String
+  fromContact    Boolean       // true = lo envió el contacto, false = lo envió el agente
+  status         MessageStatus @default(PENDING)
+  whatsappId     String?       // ID interno de WhatsApp para tracking
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  // Relaciones
+  conversation   Conversation  @relation(fields: [conversationId], references: [id])
+  conversationId String
+
+  @@map("messages")
+}
+
+// ─────────────────────────────────────────
+// COMPROMISO — registro de pago o estado del cliente
+// ─────────────────────────────────────────
+
+model Commitment {
+  id           String           @id @default(cuid())
+  status       CommitmentStatus @default(PENDING)
+  amount       Float?           // monto de la deuda
+  dueDate      DateTime?        // fecha prometida de pago
+  notes        String?          // notas manuales
+  autoDetected Boolean          @default(false) // fue detectado por OpenAI?
+  rawResponse  String?          // respuesta original del contacto (para auditoría)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relaciones
+  contact      Contact          @relation(fields: [contactId], references: [id])
+  contactId    String
+
+  @@map("commitments")
+}
