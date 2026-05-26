@@ -71,6 +71,16 @@ export default function NumerosPage() {
 
   // ── Conectar número via manager de Evolution ──────────────────────────────
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar este número? Esta acción no se puede deshacer.")) return;
+    try {
+      const res = await fetch(`/api/numeros/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) { toast.success("Número eliminado"); fetchNumbers(); }
+      else toast.error(data.error ?? "Error al eliminar");
+    } catch { toast.error("Error al eliminar número"); }
+  };
+
   const handleConnect = async (num: WhatsappNumber) => {
     setConnectingId(num.id);
 
@@ -270,6 +280,12 @@ export default function NumerosPage() {
                         {isConnected ? "Conectado" : "Desconectado"}
                       </span>
 
+                      <button
+                        onClick={() => handleDelete(num.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
+                      >
+                        Eliminar
+                      </button>
                       {!isConnected && (
                         <button
                           onClick={() => handleConnect(num)}
