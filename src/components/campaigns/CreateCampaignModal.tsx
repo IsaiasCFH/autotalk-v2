@@ -201,6 +201,19 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   // ── Paso 2 ────────────────────────────────────────────────────────────────
 
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm("¿Eliminar esta plantilla?")) return;
+    try {
+      const res = await fetch(`/api/plantillas/${templateId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) {
+        setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+        setSelectedTemplateIds((prev) => prev.filter((id) => id !== templateId));
+        toast.success("Plantilla eliminada");
+      } else toast.error(data.error ?? "Error al eliminar");
+    } catch { toast.error("Error al eliminar plantilla"); }
+  };
+
   const handleCreateTemplate = async () => {
     if (!newTemplateName.trim() || !newTemplateContent.trim()) {
       return toast.error("Completa nombre y contenido de la plantilla");
@@ -559,7 +572,13 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                                 {order}
                               </span>
                             )}
-                            <p className="text-sm font-medium text-white pr-6">{t.name}</p>
+                            <div className="flex items-center justify-between pr-6">
+                              <p className="text-sm font-medium text-white">{t.name}</p>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }}
+                                className="text-red-400/50 hover:text-red-400 text-xs ml-2"
+                              >✕</button>
+                            </div>
                             <p className="text-xs text-white/40 mt-1 line-clamp-2">{t.content}</p>
                             {extractVariables(t.content).length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
