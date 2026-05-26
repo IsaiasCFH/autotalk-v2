@@ -406,11 +406,13 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
               )}
 
               {/* Número — solo mostrar si hay más de 1 o si no hay ninguno */}
-              {numbers.length === 0 && !loadingNumbers ? (
+              {loadingNumbers ? (
+                <div className="px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-white/30">Cargando números...</div>
+              ) : numbers.length === 0 ? (
                 <div className="px-4 py-3 rounded-xl bg-red-500/5 border border-red-500/15 text-sm text-red-400">
                   No hay números conectados en {DEPARTMENT_META[department].label}. Ve a <strong>Números</strong> y conecta uno primero.
                 </div>
-              ) : numbers.length > 1 && (
+              ) : numbers.length > 1 ? (
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
                     Número de envío
@@ -437,7 +439,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </>
           )}
 
