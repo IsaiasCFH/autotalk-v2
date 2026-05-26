@@ -248,6 +248,8 @@ model Message {
   fromContact    Boolean       // true = lo envió el contacto, false = lo envió el agente
   status         MessageStatus @default(PENDING)
   whatsappId     String?       // ID interno de WhatsApp para tracking
+  mediaUrl       String?       // URL del archivo adjunto
+  mediaType      String?       // image, video, audio, document, sticker
   sentAt         DateTime?
   deliveredAt    DateTime?
   readAt         DateTime?

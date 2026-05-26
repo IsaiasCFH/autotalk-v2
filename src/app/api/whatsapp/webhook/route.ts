@@ -66,6 +66,15 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
     msg?.ephemeralMessage?.message?.conversation ??
     msg?.viewOnceMessage?.message?.imageMessage?.caption ?? "";
 
+  // Detectar tipo de media
+  let mediaType: string | null = null;
+  let mediaUrl: string | null = null;
+  if (msg?.imageMessage) { mediaType = "image"; mediaUrl = msg.imageMessage.url ?? null; }
+  else if (msg?.videoMessage) { mediaType = "video"; mediaUrl = msg.videoMessage.url ?? null; }
+  else if (msg?.audioMessage) { mediaType = "audio"; mediaUrl = msg.audioMessage.url ?? null; }
+  else if (msg?.documentMessage) { mediaType = "document"; mediaUrl = msg.documentMessage.url ?? null; }
+  else if (msg?.stickerMessage) { mediaType = "sticker"; mediaUrl = msg.stickerMessage.url ?? null; }
+
   // Continuar aunque no haya texto (puede ser imagen, audio, etc.)
 
   const phone = data.key.remoteJid
@@ -115,6 +124,8 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
       fromContact: true,
       status: MessageStatus.DELIVERED,
       whatsappId: data.key.id,
+      mediaUrl: mediaUrl ?? undefined,
+      mediaType: mediaType ?? undefined,
       sentAt: data.messageTimestamp ? new Date(data.messageTimestamp * 1000) : new Date(),
     },
   });

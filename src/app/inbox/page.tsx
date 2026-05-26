@@ -18,6 +18,8 @@ type Mensaje = {
   status: string;
   createdAt: string;
   sentAt: string | null;
+  mediaUrl: string | null;
+  mediaType: string | null;
 };
 
 type Conversacion = {
@@ -278,7 +280,22 @@ export default function InboxPage() {
                           ? "bg-white/8 text-white/90 rounded-tl-sm"
                           : "bg-emerald-500/20 text-white rounded-tr-sm border border-emerald-500/20"
                       )}>
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        {msg.mediaType === "image" && msg.mediaUrl ? (
+                          <div>
+                            <img src={msg.mediaUrl} alt="imagen" className="max-w-[200px] rounded-lg mb-1 cursor-pointer" onClick={() => window.open(msg.mediaUrl!, "_blank")} />
+                            {msg.content && <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>}
+                          </div>
+                        ) : msg.mediaType === "document" && msg.mediaUrl ? (
+                          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm underline">
+                            <span>📄</span> Ver documento
+                          </a>
+                        ) : msg.mediaType === "audio" && msg.mediaUrl ? (
+                          <audio controls src={msg.mediaUrl} className="max-w-[200px]" />
+                        ) : msg.mediaType === "video" && msg.mediaUrl ? (
+                          <video controls src={msg.mediaUrl} className="max-w-[200px] rounded-lg" />
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">{msg.content || <span className="italic opacity-50">Archivo adjunto</span>}</p>
+                        )}
                         <div className={cn("flex items-center gap-1 mt-1", msg.fromContact ? "justify-start" : "justify-end")}>
                           <span className="text-[10px] text-white/25">
                             {new Date(msg.createdAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
