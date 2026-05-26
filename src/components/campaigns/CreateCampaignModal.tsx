@@ -1,10 +1,6 @@
 "use client";
 // components/campaigns/CreateCampaignModal.tsx
-//
-// Modal de 3 pasos para crear una campaña:
-// Paso 1 → Info básica (nombre, departamento, número)
-// Paso 2 → Plantilla del mensaje con variables {{variable}}
-// Paso 3 → Contactos desde Excel (.xlsx) con mapeo de columnas
+// Modal de 3 pasos para crear campaña con rotación de plantillas (3-4)
 
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,8 +8,6 @@ import { cn } from "@/lib/utils";
 import { DEPARTMENT_META } from "@/types";
 import type { Department } from "@prisma/client";
 import * as XLSX from "xlsx";
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 type WhatsappNumber = {
   id: string;
@@ -30,7 +24,6 @@ type Template = {
   department: Department;
 };
 
-// Fila del Excel — columnas dinámicas
 type ExcelRow = Record<string, string>;
 
 type Props = {
@@ -45,18 +38,29 @@ const DEPT_OPTIONS = Object.entries(DEPARTMENT_META).map(([value, meta]) => ({
   icon: meta.icon,
 }));
 
-// Extrae variables {{variable}} de un texto
 function extractVariables(text: string): string[] {
   const matches = text.match(/\{\{(\w+)\}\}/g) ?? [];
-  return [...new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, "")))];
+  return Array.from(new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, ""))));
 }
 
-// Reemplaza variables en un texto con los valores del mapa
 function applyVariables(text: string, values: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] ?? `{{${key}}}`);
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+function buildValues(
+  row: ExcelRow,
+  columnMap: Record<string, string>,
+  phoneColumn: string,
+  nameColumn: string
+): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const [variable, column] of Object.entries(columnMap)) {
+    values[variable] = row[column] ?? "";
+  }
+  if (phoneColumn) values["telefono"] = row[phoneColumn] ?? "";
+  if (nameColumn) values["nombre"] = row[nameColumn] ?? "";
+  return values;
+}
 
 export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   const [step, setStep] = useState(1);
@@ -69,28 +73,46 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   const [selectedNumberId, setSelectedNumberId] = useState("");
   const [loadingNumbers, setLoadingNumbers] = useState(false);
 
-  // Paso 2
+  // Paso 2 — selección múltiple de plantillas (3-4)
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
   const [showNewTemplate, setShowNewTemplate] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0); // qué plantilla previsualizar
 
-  // Paso 3 — Excel
+  // Paso 3
   const [excelRows, setExcelRows] = useState<ExcelRow[]>([]);
   const [excelColumns, setExcelColumns] = useState<string[]>([]);
-  const [columnMap, setColumnMap] = useState<Record<string, string>>({}); // variable → columna
-  const [phoneColumn, setPhoneColumn] = useState(""); // columna del teléfono
-  const [nameColumn, setNameColumn] = useState(""); // columna del nombre (opcional)
-  const [unmappedVars, setUnmappedVars] = useState<string[]>([]); // variables sin columna
+  const [columnMap, setColumnMap] = useState<Record<string, string>>({});
+  const [phoneColumn, setPhoneColumn] = useState("");
+  const [nameColumn, setNameColumn] = useState("");
   const [importing, setImporting] = useState(false);
 
   if (!isOpen) return null;
 
-  // Plantilla seleccionada
-  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
-  const templateVars = selectedTemplate ? extractVariables(selectedTemplate.content) : [];
+  // Plantillas seleccionadas
+  const selectedTemplates = templates.filter((t) => selectedTemplateIds.includes(t.id));
+
+  // Variables de TODAS las plantillas seleccionadas (unión)
+  const allTemplateVars = Array.from(
+    new Set(selectedTemplates.flatMap((t) => extractVariables(t.content)))
+  );
+
+  // Toggle selección de plantilla
+  const toggleTemplate = (id: string) => {
+    setSelectedTemplateIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((i) => i !== id);
+      }
+      if (prev.length >= 4) {
+        toast.error("Máximo 4 plantillas por campaña");
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
 
   // ── Paso 1 ────────────────────────────────────────────────────────────────
 
@@ -106,7 +128,8 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
           (n: WhatsappNumber) => n.department === dept && n.status === "CONNECTED"
         );
         setNumbers(filtered);
-        if (filtered.length === 1) setSelectedNumberId(filtered[0].id);
+        // Auto-seleccionar siempre el primero disponible
+        if (filtered.length >= 1) setSelectedNumberId(filtered[0].id);
       }
     } catch {
       toast.error("Error al cargar números");
@@ -149,11 +172,14 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
       const data = await res.json();
       if (data.ok) {
         setTemplates((prev) => [data.data, ...prev]);
-        setSelectedTemplateId(data.data.id);
+        // Auto-seleccionar si hay menos de 4
+        if (selectedTemplateIds.length < 4) {
+          setSelectedTemplateIds((prev) => [...prev, data.data.id]);
+        }
         setShowNewTemplate(false);
         setNewTemplateName("");
         setNewTemplateContent("");
-        toast.success("Plantilla creada");
+        toast.success("Plantilla creada y seleccionada");
       }
     } catch {
       toast.error("Error al crear plantilla");
@@ -163,11 +189,13 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   };
 
   const handleStep2Next = () => {
-    if (!selectedTemplateId) return toast.error("Selecciona o crea una plantilla");
+    if (selectedTemplateIds.length < 3) {
+      return toast.error("Selecciona al menos 3 plantillas para la rotación");
+    }
     setStep(3);
   };
 
-  // ── Paso 3 — Leer Excel ───────────────────────────────────────────────────
+  // ── Paso 3 ────────────────────────────────────────────────────────────────
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -175,79 +203,49 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
     setImporting(true);
     try {
-      // Leer el archivo con SheetJS
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, { raw: false, defval: "" });
 
-      // Convertir a JSON — cada fila es un objeto con las columnas como keys
-      const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, {
-        raw: false,      // todo como string
-        defval: "",      // valor por defecto para celdas vacías
-      });
+      if (rows.length === 0) { toast.error("El archivo está vacío"); return; }
 
-      if (rows.length === 0) {
-        toast.error("El archivo está vacío");
-        return;
-      }
-
-      // Obtener columnas del Excel
       const cols = Object.keys(rows[0]);
       setExcelColumns(cols);
       setExcelRows(rows);
 
-      // Auto-detectar columna de teléfono
       const phoneCol = cols.find((c) =>
-        ["telefono", "teléfono", "phone", "numero", "número", "cel", "celular"].includes(
-          c.toLowerCase()
-        )
+        ["telefono", "teléfono", "phone", "numero", "número", "cel", "celular"].includes(c.toLowerCase())
       ) ?? "";
       setPhoneColumn(phoneCol);
 
-      // Auto-detectar columna de nombre
       const nameCol = cols.find((c) =>
         ["nombre", "name", "cliente", "contacto"].includes(c.toLowerCase())
       ) ?? "";
       setNameColumn(nameCol);
 
-      // Auto-mapear variables de la plantilla a columnas del Excel
+      // Auto-mapear variables
       const autoMap: Record<string, string> = {};
-      const unmapped: string[] = [];
-
-      for (const variable of templateVars) {
-        // Buscar columna con nombre similar a la variable
-        const match = cols.find(
-          (c) => c.toLowerCase() === variable.toLowerCase()
-        );
-        if (match) {
-          autoMap[variable] = match;
-        } else {
-          unmapped.push(variable);
-        }
+      for (const variable of allTemplateVars) {
+        const match = cols.find((c) => c.toLowerCase() === variable.toLowerCase());
+        if (match) autoMap[variable] = match;
       }
-
       setColumnMap(autoMap);
-      setUnmappedVars(unmapped);
 
-      if (unmapped.length > 0) {
-        toast.info(`${unmapped.length} variable(s) sin columna — mapéalas abajo`);
-      } else {
-        toast.success(`${rows.length} filas cargadas`);
-      }
-    } catch (err) {
-      toast.error("Error al leer el Excel. Verifica que sea un archivo válido.");
-      console.error(err);
+      toast.success(`${rows.length} filas cargadas`);
+    } catch {
+      toast.error("Error al leer el Excel");
     } finally {
       setImporting(false);
       e.target.value = "";
     }
   };
 
-  // Preview del mensaje con los datos de la primera fila
-  const previewMessage = selectedTemplate && excelRows.length > 0
-    ? applyVariables(selectedTemplate.content, buildValues(excelRows[0], columnMap, phoneColumn, nameColumn))
-    : selectedTemplate?.content ?? "";
+  // Preview del mensaje — rota entre plantillas seleccionadas
+  const previewTemplate = selectedTemplates[previewIndex % selectedTemplates.length];
+  const previewMessage = previewTemplate && excelRows.length > 0
+    ? applyVariables(previewTemplate.content, buildValues(excelRows[0], columnMap, phoneColumn, nameColumn))
+    : previewTemplate?.content ?? "";
 
   // ── Crear campaña ─────────────────────────────────────────────────────────
 
@@ -257,11 +255,9 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
     setLoading(true);
     try {
-      // 1. Importar contactos al sistema
       const contactsToImport = excelRows.map((row) => ({
         phone: String(row[phoneColumn] ?? "").replace(/\D/g, ""),
         name: nameColumn ? (row[nameColumn] ?? null) : null,
-        // Guardar todos los datos del Excel en metadata para las variables
         metadata: row,
       }));
 
@@ -271,12 +267,8 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         body: JSON.stringify(contactsToImport),
       });
       const importData = await importRes.json();
-      if (!importData.ok) {
-        toast.error("Error al importar contactos");
-        return;
-      }
+      if (!importData.ok) { toast.error("Error al importar contactos"); return; }
 
-      // 2. Obtener los IDs de los contactos importados
       const phones = contactsToImport.map((c) => c.phone).filter(Boolean);
       const contactsRes = await fetch(`/api/contactos?phones=${phones.join(",")}`);
       const contactsData = await contactsRes.json();
@@ -286,7 +278,6 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         return;
       }
 
-      // 3. Crear la campaña
       const campaignRes = await fetch("/api/campanias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -294,17 +285,16 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
           name,
           department,
           numberId: selectedNumberId,
-          templateIds: [selectedTemplateId],
+          templateIds: selectedTemplateIds, // array de plantillas para rotación
           contactIds: contactsData.data.map((c: { id: string }) => c.id),
-          // Pasar el mapeo de variables para personalizar mensajes
           variableMap: columnMap,
-          excelData: excelRows, // datos del Excel para personalización
+          excelData: excelRows,
         }),
       });
       const campaignData = await campaignRes.json();
 
       if (campaignData.ok) {
-        toast.success(`¡Campaña creada con ${excelRows.length} contactos!`);
+        toast.success(`¡Campaña creada con ${excelRows.length} contactos y ${selectedTemplateIds.length} plantillas!`);
         onCreated();
         handleClose();
       } else {
@@ -324,13 +314,12 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
     setNumbers([]);
     setSelectedNumberId("");
     setTemplates([]);
-    setSelectedTemplateId("");
+    setSelectedTemplateIds([]);
     setExcelRows([]);
     setExcelColumns([]);
     setColumnMap({});
     setPhoneColumn("");
     setNameColumn("");
-    setUnmappedVars([]);
     onClose();
   };
 
@@ -343,7 +332,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         className="relative w-full max-w-lg bg-[#0d0d1a] border border-white/10 rounded-2xl shadow-2xl animate-fade-in flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header con pasos */}
+        {/* Header */}
         <div className="px-6 py-5 border-b border-white/8 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-base font-semibold text-white">Nueva campaña</h2>
@@ -362,7 +351,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                 </div>
               ))}
               <span className="text-xs text-white/30 ml-1">
-                {step === 1 ? "Info básica" : step === 2 ? "Plantilla" : "Excel + Contactos"}
+                {step === 1 ? "Info básica" : step === 2 ? "Plantillas (rotación)" : "Excel + Contactos"}
               </span>
             </div>
           </div>
@@ -411,17 +400,17 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
-                  Número de envío
-                  {loadingNumbers && <span className="ml-2 text-white/20 normal-case font-normal">cargando...</span>}
-                </label>
-                {numbers.length === 0 && !loadingNumbers ? (
-                  <div className="px-4 py-3 rounded-xl bg-red-500/5 border border-red-500/15 text-sm text-red-400">
-                    No hay números conectados en {DEPARTMENT_META[department].label}.
-                    Ve a <strong>Números</strong> y conecta uno primero.
-                  </div>
-                ) : (
+              {/* Número — solo mostrar si hay más de 1 o si no hay ninguno */}
+              {numbers.length === 0 && !loadingNumbers ? (
+                <div className="px-4 py-3 rounded-xl bg-red-500/5 border border-red-500/15 text-sm text-red-400">
+                  No hay números conectados en {DEPARTMENT_META[department].label}. Ve a <strong>Números</strong> y conecta uno primero.
+                </div>
+              ) : numbers.length > 1 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                    Número de envío
+                    {loadingNumbers && <span className="ml-2 text-white/20 normal-case font-normal">cargando...</span>}
+                  </label>
                   <div className="space-y-2">
                     {numbers.map((num) => (
                       <button
@@ -442,21 +431,50 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </>
           )}
 
-          {/* ── PASO 2 ── */}
+          {/* ── PASO 2 — Selección múltiple de plantillas ── */}
           {step === 2 && (
             <>
               {!showNewTemplate ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Plantilla</label>
+                    <div>
+                      <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                        Plantillas de rotación
+                      </label>
+                      <p className="text-xs text-white/30 mt-0.5">
+                        Selecciona 3 o 4 — se enviarán en orden circular
+                      </p>
+                    </div>
                     <button onClick={() => setShowNewTemplate(true)} className="text-xs text-emerald-400 hover:text-emerald-300">
-                      + Nueva plantilla
+                      + Nueva
                     </button>
+                  </div>
+
+                  {/* Indicador de selección */}
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/3 border border-white/8">
+                    {[0, 1, 2, 3].map((i) => {
+                      const tpl = selectedTemplates[i];
+                      return (
+                        <div key={i} className={cn(
+                          "flex-1 h-8 rounded-lg flex items-center justify-center text-xs font-medium transition-all border",
+                          tpl
+                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                            : i < 3
+                            ? "bg-red-500/5 border-red-500/15 text-red-400/50 border-dashed"
+                            : "bg-white/3 border-white/8 text-white/20 border-dashed"
+                        )}>
+                          {tpl ? `${i + 1}` : i < 3 ? "req" : "opt"}
+                        </div>
+                      );
+                    })}
+                    <span className="text-xs text-white/30 ml-1">
+                      {selectedTemplateIds.length}/4
+                    </span>
                   </div>
 
                   {loadingTemplates ? (
@@ -465,41 +483,56 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     </div>
                   ) : templates.length === 0 ? (
                     <div className="flex flex-col items-center py-8 text-center">
-                      <p className="text-sm text-white/30 mb-3">No hay plantillas para este departamento</p>
+                      <p className="text-sm text-white/30 mb-3">No hay plantillas — crea al menos 3</p>
                       <button
                         onClick={() => setShowNewTemplate(true)}
                         className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 text-sm font-medium hover:bg-emerald-500/25 transition-colors border border-emerald-500/20"
                       >
-                        Crear primera plantilla
+                        Crear plantilla
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {templates.map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setSelectedTemplateId(t.id)}
-                          className={cn(
-                            "w-full text-left px-4 py-3 rounded-xl border transition-all",
-                            selectedTemplateId === t.id
-                              ? "bg-emerald-500/10 border-emerald-500/30"
-                              : "bg-white/3 border-white/8 hover:bg-white/5"
-                          )}
-                        >
-                          <p className="text-sm font-medium text-white">{t.name}</p>
-                          <p className="text-xs text-white/40 mt-1 line-clamp-2">{t.content}</p>
-                          {/* Mostrar variables detectadas */}
-                          {extractVariables(t.content).length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {extractVariables(t.content).map((v) => (
-                                <span key={v} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono">
-                                  {`{{${v}}}`}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </button>
-                      ))}
+                      {templates.map((t) => {
+                        const isSelected = selectedTemplateIds.includes(t.id);
+                        const order = selectedTemplateIds.indexOf(t.id) + 1;
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => toggleTemplate(t.id)}
+                            className={cn(
+                              "w-full text-left px-4 py-3 rounded-xl border transition-all relative",
+                              isSelected
+                                ? "bg-emerald-500/10 border-emerald-500/30"
+                                : "bg-white/3 border-white/8 hover:bg-white/5"
+                            )}
+                          >
+                            {isSelected && (
+                              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {order}
+                              </span>
+                            )}
+                            <p className="text-sm font-medium text-white pr-6">{t.name}</p>
+                            <p className="text-xs text-white/40 mt-1 line-clamp-2">{t.content}</p>
+                            {extractVariables(t.content).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {extractVariables(t.content).map((v) => (
+                                  <span key={v} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono">
+                                    {`{{${v}}}`}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Info de rotación */}
+                  {selectedTemplateIds.length >= 3 && (
+                    <div className="px-3 py-2.5 rounded-xl bg-blue-500/5 border border-blue-500/15 text-xs text-blue-400">
+                      🔄 Rotación: contacto 1 → plantilla 1, contacto 2 → plantilla 2... y vuelve a empezar
                     </div>
                   )}
                 </>
@@ -524,10 +557,10 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-emerald-500/50 transition-all resize-none"
                   />
                   <div className="bg-white/3 rounded-xl p-3">
-                    <p className="text-xs text-white/40 mb-1">💡 Variables disponibles</p>
+                    <p className="text-xs text-white/40 mb-1">💡 Variables</p>
                     <p className="text-xs text-white/30">
                       Usa <code className="text-emerald-400">{"{{nombre}}"}</code>, <code className="text-emerald-400">{"{{monto}}"}</code>, etc.
-                      Las columnas del Excel se mapearán automáticamente a estas variables en el paso siguiente.
+                      Todas las plantillas deben usar las mismas variables del Excel.
                     </p>
                   </div>
                   <button
@@ -545,7 +578,6 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
           {/* ── PASO 3 ── */}
           {step === 3 && (
             <>
-              {/* Upload Excel */}
               <div>
                 <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-2">
                   Archivo Excel / CSV
@@ -573,19 +605,12 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                       <p className="text-xs text-white/20">.xlsx, .xls, .csv</p>
                     </>
                   )}
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleExcelUpload}
-                    className="hidden"
-                  />
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
                 </label>
               </div>
 
-              {/* Mapeo de columnas — solo si hay datos */}
               {excelRows.length > 0 && (
                 <>
-                  {/* Columna del teléfono — obligatorio */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
                       Columna del teléfono <span className="text-red-400">*</span>
@@ -602,7 +627,6 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     </select>
                   </div>
 
-                  {/* Columna del nombre — opcional */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
                       Columna del nombre <span className="text-white/20">(opcional)</span>
@@ -619,16 +643,11 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     </select>
                   </div>
 
-                  {/* Mapeo de variables de la plantilla */}
-                  {templateVars.length > 0 && (
+                  {allTemplateVars.length > 0 && (
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
-                        Mapeo de variables
-                      </label>
-                      <p className="text-xs text-white/30">
-                        Indica qué columna del Excel corresponde a cada variable de la plantilla.
-                      </p>
-                      {templateVars.map((variable) => (
+                      <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Mapeo de variables</label>
+                      <p className="text-xs text-white/30">Se aplica a todas las plantillas seleccionadas.</p>
+                      {allTemplateVars.map((variable) => (
                         <div key={variable} className="flex items-center gap-3">
                           <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded w-28 flex-shrink-0 text-center">
                             {`{{${variable}}}`}
@@ -636,14 +655,10 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                           <span className="text-white/30 text-xs">→</span>
                           <select
                             value={columnMap[variable] ?? ""}
-                            onChange={(e) =>
-                              setColumnMap((prev) => ({ ...prev, [variable]: e.target.value }))
-                            }
+                            onChange={(e) => setColumnMap((prev) => ({ ...prev, [variable]: e.target.value }))}
                             className={cn(
                               "flex-1 px-3 py-1.5 rounded-lg bg-white/5 border text-white text-sm focus:outline-none transition-all",
-                              columnMap[variable]
-                                ? "border-emerald-500/30"
-                                : "border-red-500/30"
+                              columnMap[variable] ? "border-emerald-500/30" : "border-red-500/30"
                             )}
                           >
                             <option value="">Sin mapear</option>
@@ -656,13 +671,30 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     </div>
                   )}
 
-                  {/* Preview del mensaje */}
-                  {selectedTemplate && (
+                  {/* Preview con selector de plantilla */}
+                  {selectedTemplates.length > 0 && (
                     <div className="bg-white/3 rounded-xl p-4 border border-white/8">
-                      <p className="text-xs text-white/40 mb-2">👁 Preview (primera fila)</p>
-                      <p className="text-sm text-white/80 whitespace-pre-wrap">
-                        {previewMessage}
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-white/40">👁 Preview</p>
+                        <div className="flex gap-1">
+                          {selectedTemplates.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setPreviewIndex(i)}
+                              className={cn(
+                                "w-5 h-5 rounded text-[10px] font-bold transition-all",
+                                previewIndex === i
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-white/10 text-white/30 hover:bg-white/20"
+                              )}
+                            >
+                              {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-white/30 mb-1">{selectedTemplates[previewIndex % selectedTemplates.length]?.name}</p>
+                      <p className="text-sm text-white/80 whitespace-pre-wrap">{previewMessage}</p>
                     </div>
                   )}
                 </>
@@ -694,28 +726,11 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
               disabled={loading || excelRows.length === 0 || !phoneColumn}
               className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-sm font-medium hover:bg-emerald-500/25 transition-colors border border-emerald-500/20 disabled:opacity-50"
             >
-              {loading ? "Creando..." : `Crear campaña (${excelRows.length} contactos)`}
+              {loading ? "Creando..." : `Crear campaña (${excelRows.length} contactos · ${selectedTemplateIds.length} plantillas)`}
             </button>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-// Helper — construye el mapa de valores para reemplazar variables
-function buildValues(
-  row: ExcelRow,
-  columnMap: Record<string, string>,
-  phoneColumn: string,
-  nameColumn: string
-): Record<string, string> {
-  const values: Record<string, string> = {};
-  for (const [variable, column] of Object.entries(columnMap)) {
-    values[variable] = row[column] ?? "";
-  }
-  // Siempre disponibles
-  if (phoneColumn) values["telefono"] = row[phoneColumn] ?? "";
-  if (nameColumn) values["nombre"] = row[nameColumn] ?? "";
-  return values;
 }
