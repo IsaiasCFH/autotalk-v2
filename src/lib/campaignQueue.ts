@@ -70,7 +70,10 @@ export function startCampaignWorker() {
   worker = new Worker<CampaignJobData>(
     "campaign-messages",
     async (job: Job<CampaignJobData>) => {
-      const { campaignId, messageLogId, instanceName, phone, text } = job.data;
+      const { campaignId, messageLogId, instanceName, phone } = job.data;
+      // Leer el texto personalizado del MessageLog
+      const msgLog = await prisma.messageLog.findUnique({ where: { id: messageLogId } });
+      const text = msgLog?.messageText ?? job.data.text ?? "";
 
       try {
         // Verificar que la campaña no fue pausada mientras esperaba

@@ -200,6 +200,7 @@ model MessageLog {
   deliveredAt  DateTime?
   readAt       DateTime?
   failReason   String?       // si falló, por qué
+  messageText  String?       // texto personalizado del mensaje
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
