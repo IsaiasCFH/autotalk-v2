@@ -71,7 +71,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   // Paso 1
   const [name, setName] = useState("");
-  const [department, setDepartment] = useState<Department>("COBRANZA");
+  const [department, setDepartment] = useState<Department | "">("");
   const [numbers, setNumbers] = useState<WhatsappNumber[]>([]);
   const [selectedNumberId, setSelectedNumberId] = useState("");
   const [loadingNumbers, setLoadingNumbers] = useState(false);
@@ -143,12 +143,33 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   const handleStep1Next = async () => {
     if (!name.trim()) return toast.error("Ingresa un nombre para la campaña");
-    if (!selectedNumberId && numbers.length > 0) return toast.error("Selecciona un número");
-    if (numbers.length === 0) return toast.error("No hay números conectados en este departamento");
+    if (!department) return toast.error("Selecciona un departamento");
+    
+    // Cargar números en el momento del clic si no están cargados
+    let currentNumbers = numbers;
+    if (currentNumbers.length === 0) {
+      try {
+        const res = await fetch("/api/numeros");
+        const data = await res.json();
+        if (data.ok) {
+          currentNumbers = data.data.filter(
+            (n: WhatsappNumber) => n.department === department && n.status === "CONNECTED"
+          );
+          setNumbers(currentNumbers);
+        }
+      } catch {}
+    }
+    
+    if (currentNumbers.length === 0) return toast.error("No hay números conectados en este departamento");
+    
+    // Auto-seleccionar si hay 1 solo número
+    let numId = selectedNumberId;
+    if (!numId) { numId = currentNumbers[0].id; setSelectedNumberId(numId); }
 
     setLoadingTemplates(true);
     try {
-      const res = await fetch(`/api/plantillas?department=${department}`);
+      selectedNumberId || setSelectedNumberId(numId);
+    const res = await fetch(`/api/plantillas?department=${department}`);
       const data = await res.json();
       if (data.ok) setTemplates(data.data);
     } catch {
@@ -410,7 +431,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                 <div className="px-4 py-3 rounded-xl bg-white/3 border border-white/8 text-sm text-white/30">Cargando números...</div>
               ) : numbers.length === 0 ? (
                 <div className="px-4 py-3 rounded-xl bg-red-500/5 border border-red-500/15 text-sm text-red-400">
-                  No hay números conectados en {DEPARTMENT_META[department].label}. Ve a <strong>Números</strong> y conecta uno primero.
+                  No hay números conectados en este departamento. Ve a <strong>Números</strong> y conecta uno primero.
                 </div>
               ) : numbers.length > 1 ? (
                 <div className="space-y-1.5">
