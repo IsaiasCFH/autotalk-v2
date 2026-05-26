@@ -2,7 +2,7 @@
 // components/campaigns/CreateCampaignModal.tsx
 // Modal de 3 pasos para crear campaña con rotación de plantillas (3-4)
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DEPARTMENT_META } from "@/types";
@@ -734,3 +734,5 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
     </div>
   );
 }
+
+
