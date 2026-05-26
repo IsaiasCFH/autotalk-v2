@@ -60,11 +60,12 @@ export default function InboxPage() {
 
   const selectedConv = conversaciones.find((c) => c.id === selectedId) ?? null;
 
+  const isAdmin = session?.user?.role === "ADMIN";
   const fetchConversaciones = useCallback(async () => {
-    if (!activeDepartment) return;
     setLoadingConvs(true);
     try {
-      const res = await fetch(`/api/conversaciones?department=${activeDepartment}&isOpen=true`);
+      const deptParam = isAdmin ? "" : (activeDepartment ? `&department=${activeDepartment}` : `&department=${session?.user?.departments?.[0] ?? ""}`);
+      const res = await fetch(`/api/conversaciones?isOpen=true${deptParam}`);
       const data = await res.json();
       if (data.ok) setConversaciones(data.data);
     } catch {}

@@ -35,6 +35,7 @@ type EvolutionWebhookPayload = {
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json() as EvolutionWebhookPayload;
+    console.log("[Webhook] Recibido:", JSON.stringify(payload).slice(0, 300));
 
     if (payload.event === "messages.upsert") {
       await procesarMensajeEntrante(payload);
@@ -44,21 +45,28 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[Webhook]", error);
+    console.error("[Webhook] ERROR COMPLETO:", error);
     return NextResponse.json({ ok: true });
   }
 }
 
 async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
+  console.log("[Webhook] Procesando mensaje entrante, instance:", payload.instance);
   const { instance, data } = payload;
 
   if (!data.key || data.key.fromMe) return;
 
+  const msg = data.message as any;
   const texto =
-    data.message?.conversation ??
-    data.message?.extendedTextMessage?.text;
+    msg?.conversation ??
+    msg?.extendedTextMessage?.text ??
+    msg?.imageMessage?.caption ??
+    msg?.videoMessage?.caption ??
+    msg?.documentMessage?.caption ??
+    msg?.ephemeralMessage?.message?.conversation ??
+    msg?.viewOnceMessage?.message?.imageMessage?.caption ?? "";
 
-  if (!texto) return;
+  // Continuar aunque no haya texto (puede ser imagen, audio, etc.)
 
   const phone = data.key.remoteJid
     .replace("@s.whatsapp.net", "")
@@ -69,8 +77,11 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
     where: { OR: [{ label: instance }, { number: instance }] },
   });
 
+  console.log("[Webhook] Número encontrado:", numero?.id ?? "NO ENCONTRADO");
   if (!numero) return;
+  console.log("[Webhook] Buscando contacto para phone:", phone);
 
+  console.log("[Webhook] Creando/buscando contacto...");
   // Buscar o crear contacto
   const contacto = await prisma.contact.upsert({
     where: { phone },
@@ -78,6 +89,7 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
     create: { phone, name: data.pushName ?? null },
   });
 
+  console.log("[Webhook] Contacto:", contacto.id, "- Buscando conversación...");
   // Buscar conversación abierta
   let conversacion = await prisma.conversation.findFirst({
     where: { contactId: contacto.id, numberId: numero.id, isOpen: true },
@@ -94,6 +106,7 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
     });
   }
 
+  console.log("[Webhook] Guardando mensaje en conversación:", conversacion.id);
   // Guardar mensaje
   await prisma.message.create({
     data: {
