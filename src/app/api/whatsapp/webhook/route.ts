@@ -69,7 +69,23 @@ async function procesarMensajeEntrante(payload: EvolutionWebhookPayload) {
   // Detectar tipo de media
   let mediaType: string | null = null;
   let mediaUrl: string | null = null;
-  if (msg?.imageMessage) { mediaType = "image"; mediaUrl = msg.imageMessage.url ?? null; }
+  if (msg?.imageMessage) { 
+    mediaType = "image";
+    try {
+      const mediaRes = await fetch(
+        `${process.env.EVOLUTION_URL}/chat/getBase64FromMediaMessage/${payload.instance}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: process.env.EVOLUTION_API_KEY ?? "" },
+          body: JSON.stringify({ message: { key: data.key, message: data.message } }),
+        }
+      );
+      if (mediaRes.ok) {
+        const mediaData = await mediaRes.json();
+        mediaUrl = mediaData.base64 ? `data:image/jpeg;base64,${mediaData.base64}` : null;
+      }
+    } catch { mediaUrl = null; }
+  }
   else if (msg?.videoMessage) { mediaType = "video"; mediaUrl = msg.videoMessage.url ?? null; }
   else if (msg?.audioMessage) { mediaType = "audio"; mediaUrl = msg.audioMessage.url ?? null; }
   else if (msg?.documentMessage) { mediaType = "document"; mediaUrl = msg.documentMessage.url ?? null; }
