@@ -207,3 +207,4 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_conversationId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "commitments" ADD CONSTRAINT "commitments_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "contacts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE message_logs ADD COLUMN IF NOT EXISTS "messageText" TEXT;
