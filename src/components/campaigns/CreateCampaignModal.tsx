@@ -66,6 +66,21 @@ function buildValues(
 export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+
+  // Auto-cargar departamento al abrir modal
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedNumberId("");
+      setNumbers([]);
+      setDepartment("");
+      return;
+    }
+    // Agente: auto-seleccionar su departamento
+    if (!isAdmin && session?.user?.departments?.[0]) {
+      handleDeptChange(session.user.departments[0] as Department);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -143,7 +158,11 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   const handleStep1Next = async () => {
     if (!name.trim()) return toast.error("Ingresa un nombre para la campaña");
-    if (!department) return toast.error("Selecciona un departamento");
+    // Si es agente y no hay departamento, usar el primero de su lista
+    if (!department && !isAdmin && session?.user?.departments?.[0]) {
+      await handleDeptChange(session.user.departments[0] as Department);
+    }
+    if (!department && isAdmin) return toast.error("Selecciona un departamento");
     
     // Cargar números en el momento del clic si no están cargados
     let currentNumbers = numbers;
