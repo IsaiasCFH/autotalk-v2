@@ -23,9 +23,11 @@ import {
 import { MessageStatus } from "@prisma/client";
 
 // Conexión a Redis — BullMQ la necesita para persistir los jobs
+const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+const redisUrlParsed = new URL(redisUrl);
 const redisConnection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: parseInt(process.env.REDIS_PORT ?? "6379"),
+  host: redisUrlParsed.hostname,
+  port: parseInt(redisUrlParsed.port ?? "6379"),
 };
 
 // ── Tipos del job ─────────────────────────────────────────────────────────────
