@@ -3,6 +3,7 @@
 // Modal de 3 pasos para crear campaña con rotación de plantillas (3-4)
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DEPARTMENT_META } from "@/types";
@@ -63,6 +64,8 @@ function buildValues(
 }
 
 export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -379,6 +382,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                 />
               </div>
 
+              {isAdmin && (
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Departamento</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -399,6 +403,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Número — solo mostrar si hay más de 1 o si no hay ninguno */}
               {numbers.length === 0 && !loadingNumbers ? (
