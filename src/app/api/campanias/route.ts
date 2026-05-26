@@ -47,6 +47,24 @@ export async function POST(req: NextRequest) {
   }
   const templates = await prisma.template.findMany({ where: { id: { in: templateIds } } });
   const orderedTemplates = templateIds.map((id: string) => templates.find((t) => t.id === id)).filter(Boolean);
+
+  // Obtener contactos para mapear telefono a fila Excel
+  const contacts = await prisma.contact.findMany({
+    where: { id: { in: contactIds } },
+    select: { id: true, phone: true },
+  });
+
+  // Mapa telefono -> fila Excel
+  const phoneToRow: Record<string, Record<string, string>> = {};
+  const vm = (variableMap ?? {}) as Record<string, string>;
+  for (const row of (excelData ?? []) as Record<string, string>[]) {
+    const phoneCol = Object.keys(row).find(k =>
+      ["telefono","phone","numero","cel","celular"].includes(k.toLowerCase())
+    ) ?? Object.keys(row)[0];
+    const phone = String(row[phoneCol] ?? "").replace(/\D/g, "");
+    if (phone) phoneToRow[phone] = row;
+  }
+
   const campaign = await prisma.$transaction(async (tx) => {
     const newCampaign = await tx.campaign.create({
       data: {
@@ -57,11 +75,11 @@ export async function POST(req: NextRequest) {
     });
     const messageLogsData = contactIds.map((contactId: string, index: number) => {
       const template = orderedTemplates[index % orderedTemplates.length] as any;
-      const excelRow = (excelData?.[index] ?? {}) as Record<string, string>;
-      const vm = (variableMap ?? {}) as Record<string, string>;
+      const contact = contacts.find((c) => c.id === contactId);
+      const excelRow = contact ? (phoneToRow[contact.phone] ?? {}) : {};
       const personalizedText = template
         ? template.content.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => {
-            const col = vm[key]; return col ? (excelRow[col] ?? "") : "";
+            const col = vm[key]; return col ? ((excelRow as any)[col] ?? "") : "";
           })
         : "";
       return { campaignId: newCampaign.id, contactId, numberId, status: MessageStatus.PENDING, messageText: personalizedText };
