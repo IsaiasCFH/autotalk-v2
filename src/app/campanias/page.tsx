@@ -71,6 +71,23 @@ export default function CampaniasPage() {
     return () => clearInterval(interval);
   }, [fetchCampaigns]);
 
+  const handleDelete = async (campaignId: string) => {
+    if (!confirm("¿Eliminar esta campaña? Esta acción no se puede deshacer.")) return;
+    try {
+      const res = await fetch(`/api/campanias/${campaignId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Campaña eliminada");
+        if (selected?.id === campaignId) setSelected(null);
+        fetchCampaigns();
+      } else {
+        toast.error(data.error ?? "Error al eliminar");
+      }
+    } catch {
+      toast.error("Error al eliminar campaña");
+    }
+  };
+
   const handleAction = async (campaignId: string, action: "start" | "pause" | "resume") => {
     setActionLoading(campaignId);
     try {
@@ -204,6 +221,12 @@ export default function CampaniasPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                      onClick={() => handleDelete(selected.id)}
+                      className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors border border-red-500/20"
+                    >
+                      Eliminar
+                    </button>
                   {selected.status === "DRAFT" && (
                     <button
                       onClick={() => handleAction(selected.id, "start")}
