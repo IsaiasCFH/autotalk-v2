@@ -70,7 +70,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   // Auto-cargar departamento al abrir modal
   useEffect(() => {
     if (!isOpen) {
-      setSelectedNumberId("");
+      setSelectedNumberIds([]);
       setNumbers([]);
       setDepartment("");
       return;
@@ -88,7 +88,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [department, setDepartment] = useState<Department | "">("");
   const [numbers, setNumbers] = useState<WhatsappNumber[]>([]);
-  const [selectedNumberId, setSelectedNumberId] = useState("");
+  const [selectedNumberIds, setSelectedNumberIds] = useState<string[]>([]);
   const [loadingNumbers, setLoadingNumbers] = useState(false);
 
   // Paso 2 — selección múltiple de plantillas (3-4)
@@ -136,7 +136,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   const handleDeptChange = async (dept: Department) => {
     setDepartment(dept);
-    setSelectedNumberId("");
+    setSelectedNumberIds([]);
     setLoadingNumbers(true);
     try {
       const res = await fetch("/api/numeros");
@@ -147,7 +147,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         );
         setNumbers(filtered);
         // Auto-seleccionar siempre el primero disponible
-        if (filtered.length >= 1) setSelectedNumberId(filtered[0].id);
+        if (filtered.length >= 1) setSelectedNumberIds([filtered[0].id]);
       }
     } catch {
       toast.error("Error al cargar números");
@@ -158,13 +158,11 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
 
   const handleStep1Next = async () => {
     if (!name.trim()) return toast.error("Ingresa un nombre para la campaña");
-    // Si es agente y no hay departamento, usar el primero de su lista
     if (!department && !isAdmin && session?.user?.departments?.[0]) {
       await handleDeptChange(session.user.departments[0] as Department);
     }
     if (!department && isAdmin) return toast.error("Selecciona un departamento");
-    
-    // Cargar números en el momento del clic si no están cargados
+
     let currentNumbers = numbers;
     if (currentNumbers.length === 0) {
       try {
@@ -178,17 +176,13 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         }
       } catch {}
     }
-    
+
     if (currentNumbers.length === 0) return toast.error("No hay números conectados en este departamento");
-    
-    // Auto-seleccionar si hay 1 solo número
-    let numId = selectedNumberId;
-    if (!numId) { numId = currentNumbers[0].id; setSelectedNumberId(numId); }
+    if (selectedNumberIds.length === 0) setSelectedNumberIds([currentNumbers[0].id]);
 
     setLoadingTemplates(true);
     try {
-      selectedNumberId || setSelectedNumberId(numId);
-    const res = await fetch(`/api/plantillas?department=${department}`);
+      const res = await fetch(`/api/plantillas?department=${department}`);
       const data = await res.json();
       if (data.ok) setTemplates(data.data);
     } catch {
@@ -198,7 +192,6 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
     }
     setStep(2);
   };
-
   // ── Paso 2 ────────────────────────────────────────────────────────────────
 
   const handleDeleteTemplate = async (templateId: string) => {
@@ -340,7 +333,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
         body: JSON.stringify({
           name,
           department,
-          numberId: selectedNumberId,
+          numberIds: selectedNumberIds,
           templateIds: selectedTemplateIds, // array de plantillas para rotación
           contactIds: contactsData.data.map((c: { id: string }) => c.id),
           variableMap: columnMap,
@@ -368,7 +361,7 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
     setName("");
     setDepartment("COBRANZA");
     setNumbers([]);
-    setSelectedNumberId("");
+    setSelectedNumberIds([]);
     setTemplates([]);
     setSelectedTemplateIds([]);
     setExcelRows([]);
@@ -475,10 +468,10 @@ export function CreateCampaignModal({ isOpen, onClose, onCreated }: Props) {
                     {numbers.map((num) => (
                       <button
                         key={num.id}
-                        onClick={() => setSelectedNumberId(num.id)}
+                        onClick={() => setSelectedNumberIds(prev => prev.includes(num.id) ? prev.filter(id => id !== num.id) : [...prev, num.id])}
                         className={cn(
                           "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all",
-                          selectedNumberId === num.id
+                          selectedNumberIds.includes(num.id)
                             ? "bg-emerald-500/10 border-emerald-500/30"
                             : "bg-white/3 border-white/8 hover:bg-white/5"
                         )}

@@ -100,6 +100,7 @@ model WhatsappNumber {
   conversations Conversation[]
   messageLogs   MessageLog[]
 
+  campaignNumbers CampaignNumber[]
   @@map("whatsapp_numbers")
 }
 
@@ -167,6 +168,7 @@ model Campaign {
   number       WhatsappNumber @relation(fields: [numberId], references: [id])
   numberId     String
   templates    CampaignTemplate[]
+  numbers      CampaignNumber[]
   messageLogs  MessageLog[]
 
   @@map("campaigns")
@@ -282,4 +284,13 @@ model Commitment {
   contactId    String
 
   @@map("commitments")
+}
+model CampaignNumber {
+  id         String         @id @default(cuid())
+  order      Int
+  campaign   Campaign       @relation(fields: [campaignId], references: [id])
+  campaignId String
+  number     WhatsappNumber @relation(fields: [numberId], references: [id])
+  numberId   String
+  @@map("campaign_numbers")
 }
