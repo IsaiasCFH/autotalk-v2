@@ -13,8 +13,19 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search");
+  const phones = searchParams.get("phones");
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = 50;
+
+  // Si viene phones=, filtrar solo esos teléfonos
+  if (phones) {
+    const phoneList = phones.split(",").map(p => p.trim()).filter(Boolean);
+    const contactos = await prisma.contact.findMany({
+      where: { phone: { in: phoneList } },
+      include: { _count: { select: { conversations: true, commitments: true } } },
+    });
+    return NextResponse.json({ ok: true, data: contactos, total: contactos.length, page: 1 });
+  }
 
   const contactos = await prisma.contact.findMany({
     where: search
