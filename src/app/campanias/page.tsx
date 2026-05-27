@@ -295,6 +295,7 @@ export default function CampaniasPage() {
                 ].map(({ label, value, color, status }) => (
                   <button
                     key={label}
+                    onClick={() => handleMetricClick(label, status)}
                     className={cn(
                       "bg-white/[0.03] border rounded-xl p-4 text-left transition-all hover:bg-white/[0.06]",
                       metricFilter === label ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/8"
