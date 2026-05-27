@@ -112,6 +112,42 @@ export function startCampaignWorker() {
           },
         });
 
+        // Crear conversación en inbox si no existe
+        const msgLog = await prisma.messageLog.findUnique({
+          where: { id: messageLogId },
+          include: { contact: true },
+        });
+        if (msgLog) {
+          let conversacion = await prisma.conversation.findFirst({
+            where: { contactId: msgLog.contactId, numberId: msgLog.numberId, isOpen: true },
+          });
+          if (!conversacion) {
+            const num = await prisma.whatsappNumber.findUnique({ where: { id: msgLog.numberId } });
+            conversacion = await prisma.conversation.create({
+              data: {
+                contactId: msgLog.contactId,
+                numberId: msgLog.numberId,
+                department: num?.department ?? "COBRANZA",
+                agentId: (await prisma.campaign.findUnique({ where: { id: campaignId }, select: { agentId: true } }))?.agentId ?? "",
+                isOpen: true,
+              },
+            });
+          }
+          await prisma.message.create({
+            data: {
+              conversationId: conversacion.id,
+              content: text,
+              fromContact: false,
+              status: MessageStatus.SENT,
+              sentAt: new Date(),
+            },
+          });
+          await prisma.conversation.update({
+            where: { id: conversacion.id },
+            data: { updatedAt: new Date() },
+          });
+        }
+
         // Delay entre mensajes — esperar entre 3 y 8 segundos
         // antes de procesar el siguiente job
         const interDelay = calcInterMessageDelay();
