@@ -55,6 +55,14 @@ export default function InboxPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [noNumberModal, setNoNumberModal] = useState(false);
+  const [newConvModal, setNewConvModal] = useState(false);
+  const [newConvPhone, setNewConvPhone] = useState("");
+  const [newConvText, setNewConvText] = useState("");
+  const [newConvContacts, setNewConvContacts] = useState<{id:string;name:string|null;phone:string}[]>([]);
+  const [newConvNumbers, setNewConvNumbers] = useState<{id:string;number:string;label:string|null}[]>([]);
+  const [newConvNumberId, setNewConvNumberId] = useState("");
+  const [newConvLoading, setNewConvLoading] = useState(false);
+  const [newConvSending, setNewConvSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -79,6 +87,54 @@ export default function InboxPage() {
     const interval = setInterval(fetchConversaciones, 5000);
     return () => clearInterval(interval);
   }, [fetchConversaciones]);
+
+  const openNewConvModal = async () => {
+    setNewConvModal(true);
+    setNewConvPhone("");
+    setNewConvText("");
+    setNewConvNumberId("");
+    setNewConvLoading(true);
+    try {
+      const [contactsRes, numbersRes] = await Promise.all([
+        fetch("/api/contactos"),
+        fetch("/api/numeros"),
+      ]);
+      const contactsData = await contactsRes.json();
+      const numbersData = await numbersRes.json();
+      if (contactsData.ok) setNewConvContacts(contactsData.data ?? []);
+      if (numbersData.ok) {
+        const connected = numbersData.data.filter((n: any) => n.status === "CONNECTED");
+        setNewConvNumbers(connected);
+        if (connected.length === 1) setNewConvNumberId(connected[0].id);
+      }
+    } catch {}
+    finally { setNewConvLoading(false); }
+  };
+
+  const handleNewConvSend = async () => {
+    const phone = newConvPhone.replace(/\D/g, "");
+    if (!phone) return toast.error("Ingresa un número de teléfono");
+    if (!newConvText.trim()) return toast.error("Ingresa un mensaje");
+    if (!newConvNumberId) return toast.error("Selecciona un número de envío");
+    setNewConvSending(true);
+    try {
+      const res = await fetch("/api/conversaciones/nueva", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, text: newConvText.trim(), numberId: newConvNumberId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Mensaje enviado");
+        setNewConvModal(false);
+        fetchConversaciones();
+        if (data.conversationId) setSelectedId(data.conversationId);
+      } else {
+        toast.error(data.error ?? "Error al enviar");
+      }
+    } catch { toast.error("Error al enviar mensaje"); }
+    finally { setNewConvSending(false); }
+  };
 
   const fetchMensajes = useCallback(async (convId: string) => {
     setLoadingMsgs(true);
@@ -161,9 +217,12 @@ export default function InboxPage() {
                   {conversaciones.length} conversaciones abiertas
                 </p>
               </div>
-              {activeDepartment && (
-                <span className="text-xl">{DEPARTMENT_META[activeDepartment as Department].icon}</span>
-              )}
+              <button
+                onClick={openNewConvModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors border border-emerald-500/20"
+              >
+                + Nueva
+              </button>
             </div>
           </div>
 
@@ -348,6 +407,87 @@ export default function InboxPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Nueva Conversación */}
+      {newConvModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setNewConvModal(false)} />
+          <div className="relative w-full max-w-md bg-[#0d0d1a] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-white">Nueva conversación</h2>
+              <button onClick={() => setNewConvModal(false)} className="text-white/30 hover:text-white/60">✕</button>
+            </div>
+
+            {newConvLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Teléfono o contacto */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Número o contacto</label>
+                  <input
+                    type="text"
+                    value={newConvPhone}
+                    onChange={(e) => setNewConvPhone(e.target.value)}
+                    placeholder="56912345678 o busca un contacto..."
+                    list="contactos-list"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <datalist id="contactos-list">
+                    {newConvContacts.map((c) => (
+                      <option key={c.id} value={c.phone} label={c.name ?? c.phone} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* Selector de número si hay más de 1 */}
+                {newConvNumbers.length > 1 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Enviar desde</label>
+                    <div className="space-y-2">
+                      {newConvNumbers.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => setNewConvNumberId(n.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-left transition-all",
+                            newConvNumberId === n.id ? "bg-emerald-500/10 border-emerald-500/30" : "bg-white/3 border-white/8 hover:bg-white/5"
+                          )}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                          <span className="text-sm text-white">{n.label ?? n.number}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mensaje */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Mensaje</label>
+                  <textarea
+                    value={newConvText}
+                    onChange={(e) => setNewConvText(e.target.value)}
+                    placeholder="Escribe tu mensaje..."
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm focus:outline-none focus:border-emerald-500/50 resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleNewConvSend}
+                  disabled={newConvSending}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-sm font-medium hover:bg-emerald-500/25 transition-colors border border-emerald-500/20 disabled:opacity-50"
+                >
+                  {newConvSending ? "Enviando..." : "Enviar mensaje"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <NoNumberModal
         isOpen={noNumberModal}
