@@ -51,6 +51,9 @@ export default function CampaniasPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [metricFilter, setMetricFilter] = useState<string | null>(null);
+  const [metricContacts, setMetricContacts] = useState<any[]>([]);
+  const [loadingMetric, setLoadingMetric] = useState(false);
   const [createModal, setCreateModal] = useState(false);
 
   const fetchCampaigns = useCallback(async () => {
@@ -87,6 +90,22 @@ export default function CampaniasPage() {
       toast.error("Error al eliminar campaña");
     }
   };
+
+  const handleMetricClick = async (label: string, status: string | null) => {
+    if (metricFilter === label) { setMetricFilter(null); setMetricContacts([]); return; }
+    setMetricFilter(label);
+    setLoadingMetric(true);
+    try {
+      const url = status
+        ? `/api/campanias/${selected?.id}/contactos?status=${status}`
+        : `/api/campanias/${selected?.id}/contactos`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.ok) setMetricContacts(data.data);
+    } catch {}
+    finally { setLoadingMetric(false); }
+  };
+
 
   const handleAction = async (campaignId: string, action: "start" | "pause" | "resume") => {
     setActionLoading(campaignId);
@@ -267,19 +286,52 @@ export default function CampaniasPage() {
               {/* Métricas */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                 {[
-                  { label: "Total contactos", value: selected.stats.total, color: "text-white" },
-                  { label: "Enviados", value: selected.stats.sent, color: "text-blue-400" },
-                  { label: "Entregados", value: selected.stats.delivered, color: "text-teal-400" },
-                  { label: "Leídos ✓✓", value: selected.stats.read, color: "text-emerald-400" },
-                  { label: "Fallidos", value: selected.stats.failed, color: "text-red-400" },
-                  { label: "Pendientes", value: selected.stats.pending, color: "text-slate-400" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-white/[0.03] border border-white/8 rounded-xl p-4">
+                  { label: "Total contactos", value: selected.stats.total, color: "text-white", status: null },
+                  { label: "Enviados", value: selected.stats.sent, color: "text-blue-400", status: "SENT" },
+                  { label: "Entregados", value: selected.stats.delivered, color: "text-teal-400", status: "DELIVERED" },
+                  { label: "Leídos ✓✓", value: selected.stats.read, color: "text-emerald-400", status: "READ" },
+                  { label: "Fallidos", value: selected.stats.failed, color: "text-red-400", status: "FAILED" },
+                  { label: "Pendientes", value: selected.stats.pending, color: "text-slate-400", status: "PENDING" },
+                ].map(({ label, value, color, status }) => (
+                  <button
+                    key={label}
+                    className={cn(
+                      "bg-white/[0.03] border rounded-xl p-4 text-left transition-all hover:bg-white/[0.06]",
+                      metricFilter === label ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/8"
+                    )}
+                  >
                     <p className="text-xs text-white/40 mb-1">{label}</p>
                     <p className={cn("text-2xl font-bold", color)}>{value.toLocaleString()}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
+              {metricFilter && (
+                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-white/60">{metricFilter}</h3>
+                    <button onClick={() => { setMetricFilter(null); setMetricContacts([]); }} className="text-white/30 hover:text-white/60 text-xs">✕ Cerrar</button>
+                  </div>
+                  {loadingMetric ? (
+                    <div className="flex justify-center py-4">
+                      <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+                    </div>
+                  ) : metricContacts.length === 0 ? (
+                    <p className="text-sm text-white/30 text-center py-3">No hay contactos en esta categoría</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {metricContacts.map((c: any) => (
+                        <div key={c.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/3">
+                          <div>
+                            <p className="text-sm text-white">{c.contact?.name ?? c.contact?.phone}</p>
+                            <p className="text-xs text-white/30">{c.contact?.phone}</p>
+                          </div>
+                          <span className="text-xs text-white/40">{c.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Barras de progreso */}
               {selected.stats.total > 0 && (
