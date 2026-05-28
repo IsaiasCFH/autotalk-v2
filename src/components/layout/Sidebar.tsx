@@ -86,8 +86,7 @@ const NAV_SECTIONS: NavSection[] = [
   { id: "numeros",     label: "Números",     icon: Icons.numbers,     href: "/numeros" },
   { id: "compromisos", label: "Compromisos", icon: Icons.commitments, href: "/compromisos" },
   { id: "plantillas",  label: "Plantillas",  icon: Icons.templates,   href: "/plantillas", adminOnly: true },
-  { id: "plantillas",  label: "Plantillas",  icon: Icons.templates,   href: "/plantillas", adminOnly: true },
-  { id: "agentes",     label: "Agentes",     icon: Icons.agents,      href: "/agentes", adminOnly: true },
+    { id: "agentes",     label: "Agentes",     icon: Icons.agents,      href: "/agentes", adminOnly: true },
 ];
 
 export function Sidebar() {
