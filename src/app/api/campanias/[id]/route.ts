@@ -16,6 +16,7 @@ export async function DELETE(
   try {
     await prisma.messageLog.deleteMany({ where: { campaignId: id } });
     await prisma.campaignTemplate.deleteMany({ where: { campaignId: id } });
+    await prisma.campaignNumber.deleteMany({ where: { campaignId: id } });
     await prisma.campaign.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
