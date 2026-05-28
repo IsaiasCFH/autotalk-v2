@@ -21,7 +21,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Área principal — se desplaza para dejar espacio al sidebar */}
       <main
         className={cn(
-          "flex-1 flex flex-col min-h-screen overflow-hidden",
+          "flex-1 flex flex-col min-h-screen overflow-y-auto",
           "transition-all duration-300 ease-in-out",
           sidebarOpen ? "ml-64" : "ml-16"
         )}
