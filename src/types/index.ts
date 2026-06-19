@@ -79,31 +79,43 @@ export const DEPARTMENT_META: Record<
     label: "Cobranza",
     color: "text-red-400",
     bgColor: "bg-red-500/10 border-red-500/20",
-    icon: "💰",
+    icon: "",
   },
   SELECCION: {
     label: "Selección",
     color: "text-blue-400",
     bgColor: "bg-blue-500/10 border-blue-500/20",
-    icon: "👥",
+    icon: "",
   },
   CONTABILIDAD: {
     label: "Contabilidad",
     color: "text-yellow-400",
     bgColor: "bg-yellow-500/10 border-yellow-500/20",
-    icon: "📊",
+    icon: "",
   },
   VENTAS: {
     label: "Ventas",
     color: "text-green-400",
     bgColor: "bg-green-500/10 border-green-500/20",
-    icon: "🚀",
+    icon: "",
   },
   CSX: {
     label: "CSX",
     color: "text-purple-400",
     bgColor: "bg-purple-500/10 border-purple-500/20",
-    icon: "🎧",
+    icon: "",
+  },
+  DEUDAS: {
+    label: "Deudas",
+    color: "text-orange-400",
+    bgColor: "bg-orange-500/10 border-orange-500/20",
+    icon: "",
+  },
+  EMPRENDE: {
+    label: "Emprende",
+    color: "text-teal-400",
+    bgColor: "bg-teal-500/10 border-teal-500/20",
+    icon: "",
   },
 };
 

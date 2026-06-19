@@ -26,6 +26,8 @@ enum Department {
   CONTABILIDAD
   VENTAS
   CSX
+  DEUDAS
+  EMPRENDE
 }
 
 enum WhatsappStatus {

@@ -1,0 +1,97 @@
+id,name,email,role,createAt
+162,Camila Alvarez,camila.alvarez@intelia.global,admin,2024-10-08 12:08:36.784-03
+163,Claudio Reyes,claudio.reyes@intelia.global,admin,2024-10-08 12:09:10.064-03
+164,joindev_no_asign,,,
+165,botmaker_emprende,,,
+166,botmaker_emprende,,,
+167,juan,juan@vasquez.cl,sadmin,2024-10-08 12:37:55.144-03
+168,Jose Bahamondez,jose.bahamondez@emprende.cl,sadmin,2024-12-04 16:42:27.715-03
+169,Wilmer Fuentes,wilmer@intelia.global,exect,2025-01-17 12:22:57.681-03
+170,Scarlett Hermosilla,scarlett@emprende.cl,OPERATOR,
+171,Ivan Casanova,ivan@emprende.cl,sadmin,2024-10-22 10:36:04.419-03
+172,Cristian Rojo,cristian.rojo@emprende.cl,sadmin,2024-10-08 12:10:13.667-03
+173,Ivan Casanova,ivan@intelia.global,sadmin,2024-11-27 12:36:33.137-03
+38493,Nathalia Canivilo,nathalia@deudas.cl,OPERATOR,2025-08-27 16:03:02.501-04
+176,Contacto Emprende .cl,pagos@emprende.cl,SUPERVISOR,
+177,susana tapia,susana.tapia@emprende.cl,,
+178,marketing,sitios@emprende.cl,,
+179,Conctacto,contacto@emprende.cl,,
+180,Cristian Rojo,cristian.rojo@emprende.cl,ADMIN,
+181,Victor Olivos,victor.olivos@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+182,datos,dats@intelia.gobal,exect,2025-01-17 12:21:14.52-03
+183,felipe avello,felipe@intelia.global,exect,2025-01-17 12:21:45.424-03
+184,emprende,manual.extractor@emprende.cl,admin,2025-01-13 15:29:52.352-03
+185,botmaker_deudas,,,
+186,Luismar Colina,luismar@emprende.cl,agent,2025-04-10 19:51:06.774-04
+187,Jose Diaz,jose.diaz@emprende.cl,agent,2025-04-10 19:51:05.651-04
+188,Antonieta Escobar,antonieta.escobar@deudas.cl,agent,2025-04-10 19:50:59.17-04
+189,Carolina Sierra,carolina.sierra@deudas.cl,agent,2025-04-10 19:51:00.973-04
+190,Elaine Yanes,elaine@emprende.cl,agent,2025-04-10 19:51:02.982-04
+191,Luan Gabriel Hayakawa Duarte,luan.duarte@joindeveloper.com.br,administrator,2025-04-10 19:51:06.398-04
+192,Dominique,dominique.reinoso@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+193,Atencion al cliente,firmadigital@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+194,Cobradoras EmprendeDeudas,cobranza@deudas.cl,agent,2025-04-10 19:51:01.603-04
+195,Yasna Manriquez,yasna.manriquez@emprende.cl,agent,2025-04-10 19:51:09.807-04
+196,Elizabeth Labra,elizabeth.labra@emprende.cl,agent,2025-04-10 19:51:03.356-04
+197,Mariela Rivera,mariela.rivera@emprende.cl,agent,2025-04-10 19:51:07.148-04
+198,Cristopher Rojas,cristopher.rojas@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+254389,Perla Castro,perla.castro@emprende.cl,OPERATOR,2025-12-02 17:56:11.952-03
+200,Alejandro Peroni,alejandro.peroni@emprende.cl,administrator,2025-04-10 19:50:58.514-04
+201,Nicole Jara,nicole@intelia.global,ADMIN,
+202,David Tapia,david.tapia@deudas.cl,agent,2025-04-10 19:51:02.608-04
+203,Valeria Salinas,contacto@seguridad.cl,agent,2025-04-10 19:51:08.548-04
+204,Empleos.cl,contacto@emprelos.cl,agent,2025-04-10 19:51:03.736-04
+205,Veronica Silva,veronica.silva@deudas.cl,agent,2025-04-10 19:51:08.923-04
+206,Congelados.cl,congelados@emprende.cl,agent,2025-04-10 19:51:01.978-04
+207,Hipotecario.cl,hipotecario@emprende.cl,agent,2025-04-10 19:51:04.38-04
+208,Carla Gonzalez,carla.gonzalez@emprende.cl,agent,2025-04-10 19:51:00.322-04
+209,Pedro Vega,pedro@5minutos.io,ADMIN,
+210,Arsenia Triana,arsenia@deudas.cl,OPERATOR,
+211,Ximena T,ximena@emprende.cl,agent,2025-04-10 19:51:09.43-04
+212,Camila Oyarce,camila.oyarce@emprende.cl,OPERATOR,
+214,Gustavo Garrido,gustavo.garrido@emprende.cl,OPERATOR,
+215,Katherine Cuevas,katherine.cuevas@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+216,Alexis Araya,alexis.araya@intelia.global,ADMIN,
+217,Raimundo Jury,raimundo@emprende.cl,ADMIN,
+213,Perla Castro,perla.castro@emprende.cl,OPERATOR,
+293558,Ventas Comercial,ventas@emprende.cl,OPERATOR,2026-06-18 10:24:54.428-04
+221,Sofia Acuña,analytics@emprende.cl,ADMIN,
+222,gonzalo alvarado,gonzalo@intelia.global,agent,2025-08-27 12:08:36.784-04
+223,Jennifer Becerra ,calidad@emprende.cl,OPERATOR,
+244,Belén Velásquez,belen@deudas.cl,OPERATOR,
+224,Carlos Espinoza,carlos@emprende.cl,OPERATOR,
+225,Carolina Diaz,carolinadiaz@emprende.cl,OPERATOR,
+230,Contacto Deudas .cl,contacto@deudas.cl,ADMIN,
+229,Carlos Eulufi,carlos.eulufi@deudas.cl,OPERATOR,
+253,Jinmy Villalobos,jinmy@emprende.cl,OPERATOR,
+231,Cristóbal Serón,cristobal@deudas.cl,OPERATOR,
+226,Cristian Muñoz,cristian.munoz@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+235,Leonardo Delgado,leonardo@emprende.cl,OPERATOR,
+245,Christian Villela,cvillela@deudas.cl,OPERATOR,
+227,Daniela Troncoso,daniela.troncoso@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+228,Felipe Fuentes,felipe.fuentes@emprende.cl,ADMIN,
+232,Gonzalo Alvarado,gonzalo@intelia.global,ADMIN,
+246,Ivonne Hidalgo,ivonne.hidalgo@deudas.cl,OPERATOR,
+247,Jimmy Fuentes,jimmy@deudas.cl,OPERATOR,
+248,Kay Gomez,kay.gomez@deudas.cl,OPERATOR,
+220,Iván Casanova C.,ivan@emprende.cl,ADMIN,
+119368,María Eugenia Carreño,mariaeugenia@deudas.cl,OPERATOR,2025-09-12 13:55:35.063-03
+233,Mirko Fernández,mirko.fernandez@deudas.cl,OPERATOR,
+251,Priscila Ovalle,priscila.ovalle@deudas.cl,OPERATOR,
+219,German Escalona,german.escalona@emprende.cl,OPERATOR,
+250,Pagos,pagos@deudas.cl,SUPERVISOR,
+218,Franco Pereira,franco@emprende.cl,OPERATOR,
+254,José Bahamondez,jose.bahamondez@emprende.cl,ADMIN,
+255,Kathleen Pastor,kathleen@emprende.cl,OPERATOR,
+234,Rodrigo Townsend,rodrigo.townsend@deudas.cl,ADMIN,
+252,jessica Lamilla,jessica.lamilla@emprende.cl,OPERATOR,
+236,Lorena Ahumada,lorena.ahumada@emprende.cl,T11ZSIY2AM04HHPCTPUE,
+249,Marcelo Malluzo,marcelo@intelia.global,ADMIN,
+239,Ricardo Araos,ricardo@emprende.cl,ADMIN,
+241,Scarlett,scarlett.flores@emprende.cl,OPERATOR,
+238,Perla Castro,perla@emprende.cl,OPERATOR,
+140173,fernando.rivera@emprende.cl,fernando.rivera@emprende.cl,OPERATOR,2025-09-30 08:46:45.869-03
+237,Nataly Astorga,nataly.astorga@emprende.cl,OPERATOR,
+242,Susana Tapia,susana.tapia@emprende.cl,OPERATOR,
+243,Wilmen Fuentes,wilmen@emprende.cl,OPERATOR,
+240,Ronald Brito,ronald.brito@emprende.cl,OPERATOR,
