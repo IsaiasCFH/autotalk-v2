@@ -74,7 +74,7 @@ export default function InboxPage() {
   const fetchConversaciones = useCallback(async () => {
     setLoadingConvs(true);
     try {
-      const deptParam = isAdmin ? "" : (activeDepartment ? `&department=${activeDepartment}` : `&department=${session?.user?.departments?.[0] ?? ""}`);
+      const deptParam = activeDepartment ? `&department=${activeDepartment}` : (isAdmin ? "" : `&department=${session?.user?.departments?.[0] ?? ""}`);
       const res = await fetch(`/api/conversaciones?isOpen=true${deptParam}`);
       const data = await res.json();
       if (data.ok) setConversaciones(data.data);
