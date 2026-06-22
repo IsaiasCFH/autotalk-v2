@@ -104,8 +104,12 @@ export function Sidebar() {
 
   const handleNavClick = (section: NavSection) => router.push(section.href);
   const handleDeptClick = (dept: Department) => {
+    if (!isAdmin && !userDepts.includes(dept)) {
+      alert("No tienes permisos para acceder a este departamento");
+      return;
+    }
     setActiveDepartment(dept);
-    router.push(`/inbox/${dept.toLowerCase()}`);
+    router.push("/inbox");
   };
 
   return (
