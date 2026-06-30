@@ -212,7 +212,7 @@ export function calcTypingDelay(text: string): number {
 
 // Delay entre mensajes consecutivos (3-8 segundos)
 export function calcInterMessageDelay(): number {
-  return Math.floor(Math.random() * (8000 - 3000) + 3000);
+  return Math.floor(Math.random() * (75000 - 55000) + 55000);
 }
 
 // Formatear número al formato JID de WhatsApp
