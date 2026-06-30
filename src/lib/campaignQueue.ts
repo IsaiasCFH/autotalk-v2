@@ -109,6 +109,7 @@ export function startCampaignWorker() {
           data: {
             status: MessageStatus.SENT,
             sentAt: new Date(),
+            whatsappId: result.key.id,
           },
         });
 
@@ -258,4 +259,5 @@ export async function resumeCampaign(campaignId: string): Promise<void> {
     where: { id: campaignId },
     data: { status: "RUNNING" },
   });
+  await enqueueCampaign(campaignId);
 }

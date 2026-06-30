@@ -245,4 +245,14 @@ async function procesarActualizacionEstado(payload: EvolutionWebhookPayload) {
       ...(nuevoEstado === MessageStatus.READ ? { readAt: new Date() } : {}),
     },
   });
+
+  // También actualizar message_logs (métricas de campañas)
+  await prisma.messageLog.updateMany({
+    where: { whatsappId: data.id },
+    data: {
+      status: nuevoEstado,
+      ...(nuevoEstado === MessageStatus.DELIVERED ? { deliveredAt: new Date() } : {}),
+      ...(nuevoEstado === MessageStatus.READ ? { readAt: new Date() } : {}),
+    },
+  });
 }

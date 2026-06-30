@@ -205,6 +205,7 @@ model MessageLog {
   readAt       DateTime?
   failReason   String?       // si falló, por qué
   messageText  String?       // texto personalizado del mensaje
+  whatsappId   String?       // ID del mensaje en Evolution/WhatsApp
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
