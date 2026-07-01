@@ -288,8 +288,8 @@ export default function CampaniasPage() {
                 {[
                   { label: "Total contactos", value: selected.stats.total, color: "text-white", status: null },
                   { label: "Enviados", value: selected.stats.sent, color: "text-blue-400", status: "SENT" },
-                  { label: "Entregados", value: selected.stats.delivered, color: "text-teal-400", status: "DELIVERED" },
-                  { label: "Leídos ✓✓", value: selected.stats.read, color: "text-emerald-400", status: "READ" },
+                  // { label: "Entregados", value: selected.stats.delivered, color: "text-teal-400", status: "DELIVERED" },
+                  // { label: "Leídos ✓✓", value: selected.stats.read, color: "text-emerald-400", status: "READ" },
                   { label: "Fallidos", value: selected.stats.failed, color: "text-red-400", status: "FAILED" },
                   { label: "Pendientes", value: selected.stats.pending, color: "text-slate-400", status: "PENDING" },
                 ].map(({ label, value, color, status }) => (
@@ -340,8 +340,8 @@ export default function CampaniasPage() {
                   <h3 className="text-sm font-medium text-white/60 mb-4">Progreso de entrega</h3>
                   {[
                     { label: "Tasa de envío", value: selected.stats.sent + selected.stats.delivered + selected.stats.read, color: "bg-blue-500" },
-                    { label: "Tasa de entrega", value: selected.stats.delivered + selected.stats.read, color: "bg-teal-500" },
-                    { label: "Tasa de lectura", value: selected.stats.read, color: "bg-emerald-500" },
+                    // { label: "Tasa de entrega", value: selected.stats.delivered + selected.stats.read, color: "bg-teal-500" },
+                    // { label: "Tasa de lectura", value: selected.stats.read, color: "bg-emerald-500" },
                   ].map(({ label, value, color }) => {
                     const pct = Math.round((value / selected.stats.total) * 100);
                     return (
