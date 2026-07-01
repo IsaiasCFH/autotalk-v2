@@ -232,6 +232,7 @@ async function procesarActualizacionEstado(payload: EvolutionWebhookPayload) {
     DELIVERY_ACK: MessageStatus.DELIVERED,
     READ: MessageStatus.READ,
     PLAYED: MessageStatus.READ,
+    ERROR: MessageStatus.FAILED,
   };
 
   const nuevoEstado = statusMap[data.status];
