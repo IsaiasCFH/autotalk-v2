@@ -200,6 +200,7 @@ export async function enqueueCampaign(campaignId: string): Promise<void> {
     where: { id: campaignId },
     include: {
       number: true,
+      numbers: { include: { number: true } },
       templates: {
         include: { template: true },
         orderBy: { order: "asc" },
@@ -210,22 +211,23 @@ export async function enqueueCampaign(campaignId: string): Promise<void> {
       },
     },
   });
-
   if (!campaign) throw new Error("Campaña no encontrada");
+
   if (!campaign.number) throw new Error("Campaña sin número asignado");
 
+  const instanceNames = (campaign as any).numbers?.length > 0 ? (campaign as any).numbers.map((cn: any) => cn.number.label ?? cn.number.number) : [campaign!.number!.label ?? campaign!.number!.number];
   // Combinar el texto de todas las plantillas en orden
   const text = campaign.templates
     .map((ct) => ct.template.content)
     .join("\n\n");
 
   // Encolar un job por cada contacto pendiente
-  const jobs = campaign.messageLogs.map((log) => ({
+  const jobs = campaign.messageLogs.map((log, index) => ({
     name: `msg-${log.id}`,
     data: {
       campaignId,
       messageLogId: log.id,
-      instanceName: campaign.number.label ?? campaign.number.number,
+      instanceName: instanceNames[index % instanceNames.length],
       phone: log.contact.phone,
       text,
     } as CampaignJobData,
